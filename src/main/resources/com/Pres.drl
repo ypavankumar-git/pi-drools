@@ -1,0 +1,29 @@
+import com.pi.measure.model.*;
+import java.time.LocalDateTime;
+rule "Valid Prescription during Measurement Period"
+    agenda-group "condition1"
+   when
+           st :  MeasurementPeriod()
+           med : Medication ( relevantPeriod.relevantStart >= st.startDateTime , relevantPeriod.relevantEnd <= st.endDateTime  )
+    then
+          med.setValidPrescription( true );
+end
+rule "Count of Valid Numerator Prescriptions"
+    agenda-group "condition2"
+   when
+      med : Medication ( validPrescription == true && sendMode == 'E' && formularyPerformed == 'Y' )
+      pat : Patient()
+   then
+      pat.getExpression().setNumerator((pat.getExpression().getNumerator())+1);
+end
+rule "Count of Valid Denominator Prescriptions"
+    agenda-group "condition2"
+   when
+       med : Medication ( validPrescription == true &&
+       (rxStatus == 'C' || rxStatus == 'R' || rxStatus == 'D' || rxStatus == 'X' ) &&
+       (allowEDI == 'Y' || (allowEDI == 'N' && NDC != null) ) && (otcDrugFlag == 'R' || otcDrugFlag == 'U') &&
+       (sendMode == 'E' || sendMode == 'H' || sendMode== 'O' || sendMode == 'P' || sendMode == 'T' ) )
+       pat : Patient()
+   then
+        pat.getExpression().setDenominator((pat.getExpression().getDenominator())+1);
+end
